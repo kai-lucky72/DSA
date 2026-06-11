@@ -57,10 +57,13 @@
  *       format is always shown to the user BEFORE typing:
  *           Car/Truck  : RA + 1 letter + 3 digits + 1 letter   e.g. RAD123B
  *           Motorcycle : R  + 1 letter + 3 digits + 1 letter   e.g. RB001A
- *     - Dates are fully validated: strict YYYY-MM-DD HH:MM format, year
- *       range 2000-2100 (so "1/1/1" or year 0001 are impossible), month
- *       1-12, day checked against the real length of that month including
- *       LEAP YEARS, hour 0-23, minute 0-59.
+ *     - Entry/exit times are stamped AUTOMATICALLY from the computer's
+ *       clock (like a real barrier system) - the user never types a date,
+ *       so impossible dates such as "1/1/1" or "2026-02-30" cannot enter
+ *       the system at all. The system always follows the PC time. The
+ *       DateTime class still contains full calendar validators (strict
+ *       format, year 2000-2100, days-per-month, LEAP YEARS, hour/minute
+ *       ranges) used as an internal safety net and for future extensions.
  *     - TIMELINE LOGIC: the system keeps a global event clock. Every new
  *       event (entry or exit) must NOT happen before the previous recorded
  *       event, and a vehicle can never exit before it entered.
@@ -597,28 +600,23 @@ namespace input {
         }
     }
 
-    /* Date-time entry. The attendant has two options:
-         - press ENTER          -> the current SYSTEM time is used,
-         - type a timestamp     -> it goes through the strict parser and the
-                                   full calendar validation; any defect is
-                                   explained and the prompt repeats.
-       So an impossible input like "1/1/1" (wrong separators) or
-       "2026-02-30 10:00" (February has no day 30) can never get through. */
-    DateTime dateTime(const string& label) {
-        while (true) {
-            cout << "  " << label << " - press ENTER for current system time,\n"
-                 << "  or type it as YYYY-MM-DD HH:MM : ";
-            string line;
-            if (!rawLine(line)) { cout << "\n[EOF] Exiting.\n"; exit(0); }
-            if (line.empty()) {
-                DateTime n = DateTime::now();
-                cout << "  -> Using current time: " << n.toString() << "\n";
-                return n;
-            }
-            DateTime dt; string err;
-            if (DateTime::parse(line, dt, err)) return dt;
-            cout << "  [!] Invalid date/time: " << err << "\n";
-        }
+    /* AUTOMATIC date-time capture (no manual typing).
+       Entry and exit timestamps are ALWAYS taken from the computer's clock
+       at the exact moment the operation happens - just like a real barrier
+       system stamps the ticket. The captured time is echoed to the screen
+       so the attendant always sees what was recorded.
+       Because the time comes from the PC clock, the system automatically
+       follows the computer's time: change the PC clock and the next stamp
+       reflects it. (If the clock is moved BACKWARDS the engine's timeline
+       guard catches the inconsistency and explains it - see timelineOk().)
+       Manual input is impossible, therefore invalid dates such as
+       "1/1/1" or "2026-02-30" simply cannot enter the system; the strict
+       validators in DateTime (isValid/parse) remain available for any
+       future feature that accepts a typed timestamp. */
+    DateTime stampNow(const string& label) {
+        DateTime n = DateTime::now();
+        cout << "  " << label << " (taken from system clock): " << n.toString() << "\n";
+        return n;
     }
 } // namespace input
 
@@ -1008,14 +1006,14 @@ int main() {
             }
             VehicleType t = input::vehicleType();      // type first ...
             string plate  = input::plateFor(t);        // ... so the right format is shown
-            DateTime entry = input::dateTime("Entry time");
+            DateTime entry = input::stampNow("Entry time");   // automatic PC-clock stamp
             if (system.registerEntry(plate, t, entry, msg)) cout << "  [OK] " << msg << "\n";
             else cout << "  [X] " << msg << "\n";
             break;
         }
         case 6: {   /* ---- vehicle exit (Tasks 3 & 4) ---- */
             string plate = input::plateAny("  Plate number of exiting vehicle");
-            DateTime exitT = input::dateTime("Exit time");
+            DateTime exitT = input::stampNow("Exit time");    // automatic PC-clock stamp
             if (system.processExit(plate, exitT, msg)) cout << msg << "\n";  // the receipt
             else cout << "  [X] " << msg << "\n";
             break;

@@ -14,6 +14,9 @@ and an in-memory data layer (the chosen data structures). All user input
 crosses a validation boundary before it can reach the engine.
 
 ```mermaid
+---
+id: 53103569-9d16-45c9-806a-76eb572cdbbc
+---
 flowchart TB
     subgraph UI["PRESENTATION LAYER"]
         MENU["Menu-driven console<br/>main loop, options 0-12<br/>prints menus, receipts, reports"]
