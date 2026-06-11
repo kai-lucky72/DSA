@@ -66,15 +66,23 @@ On Windows the executable is `smart_parking.exe`.
 At startup you can load 6 sample slots (M-01, M-02, C-01, C-02, C-03, T-01)
 for a quick demo by answering `1`.
 
-For times (entry/exit) you may **press ENTER to use the current system time**
-or type a time manually as `YYYY-MM-DD HH:MM`.
+**Entry and exit times are stamped automatically from the computer's clock**
+— the attendant never types a date or time, exactly like a real barrier
+system stamps a ticket. The recorded timestamp is echoed on screen at every
+entry/exit. Because the time source is the PC clock, the system always
+follows the computer's time. If the clock is ever moved backwards between
+two operations, the timeline guard detects the inconsistency and refuses
+the operation with a clear explanation instead of producing a negative
+duration.
 
 ## Vehicle plate number formats (enforced)
 
 | Vehicle type | Format | Example |
 |--------------|--------|---------|
-| Car / Truck  | `RA` + 1 letter + 3 digits + 1 letter | `RAD123B` |
-| Motorcycle   | `RB` + 3 digits + 1 letter            | `RB001A`  |
+| Car / Truck  | `RA` + 1 letter + 3 digits + 1 letter (`RA_---_`) | `RAD123B` |
+| Motorcycle   | `R` + 1 letter + 3 digits + 1 letter (`R_---_`)   | `RB001A`  |
+
+(`_` = letter, `-` = digit)
 
 - The expected format is **always displayed as a reminder** before the user
   types the plate (the vehicle type is asked first for this reason).
@@ -91,9 +99,11 @@ or type a time manually as `YYYY-MM-DD HH:MM`.
 - **I/O validation** — every input is line-based: letters where numbers are
   expected, empty lines, out-of-range values, and EOF are all handled with a
   clear message and a re-prompt (no crashes, no infinite loops).
-- **Date/time validation** — strict `YYYY-MM-DD HH:MM` format; month/day
-  ranges, days-per-month, and **leap years** are checked (e.g. `2026-02-30`
-  is rejected with the exact reason).
+- **Date/time correctness** — timestamps are captured automatically from
+  the PC clock, so invalid dates (`1/1/1`, `2026-02-30`, ...) can never
+  enter the system. The `DateTime` class additionally contains full
+  calendar validators (strict format, year 2000–2100, days-per-month,
+  **leap years**, hour/minute ranges) as an internal safety net.
 - **Timeline logic** —
   - a vehicle can never exit before it entered;
   - the system keeps a global event clock: every new entry/exit must be in
